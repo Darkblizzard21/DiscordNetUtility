@@ -1,16 +1,23 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
 
-namespace DiscordNetUtility
+namespace DNU
 {
     public abstract class SlashCommand
     {
-        public abstract Tuple<ulong, SlashCommandProperties> BuildCommand();
+        public abstract string Name { get; }
+        public abstract string Description { get; }
+        
+        public virtual Optional<List<SlashCommandOptionBuilder>> GetOptions() =>
+            Optional<List<SlashCommandOptionBuilder>>.Unspecified;
 
-        public async Task HandleCommand(SocketSlashCommand command)
+        public virtual async Task HandleCommand(SocketSlashCommand command)
         {
+            await command.RespondAsync($"You executed {command.Data.Name}. (this is the default implementation)");
         }
+        
+        public abstract bool IsGlobal { get; }
     }
 }
