@@ -5,9 +5,16 @@ namespace DNU
 {
     public static class UserInteraction
     {
+        private static ulong? _maintainerId = null;
+
+        public static ulong MaintainerId
+        {
+            set => _maintainerId = value;
+            get => _maintainerId ?? 0;
+        }
         public static bool IsAdmin(SocketGuildUser user)
         {
-            return user.GuildPermissions.Administrator;
+            return user.GuildPermissions.Administrator || (_maintainerId.HasValue && user.Id == _maintainerId);
         }
 
         public static async Task<bool> CheckAdmin(this SocketSlashCommand command, SocketGuildUser user)
