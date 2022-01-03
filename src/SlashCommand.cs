@@ -9,15 +9,14 @@ namespace DNU
     {
         public abstract string Name { get; }
         public abstract string Description { get; }
-        
+        public abstract bool IsGlobal { get; }
+
         public virtual Optional<List<SlashCommandOptionBuilder>> GetOptions() =>
             Optional<List<SlashCommandOptionBuilder>>.Unspecified;
-
+        
         public virtual async Task HandleCommand(SocketSlashCommand command)
         {
             await command.RespondAsync($"You executed {command.Data.Name}. (this is the default implementation)");
         }
-        
-        public abstract bool IsGlobal { get; }
     }
 }

@@ -12,14 +12,24 @@ namespace DNU
     public static class SlashCommandUtil
     {
         private static readonly Dictionary<string, SlashCommand> Commands = new Dictionary<string, SlashCommand>();
+        private static IEnumerable<SlashCommand> _commands = new List<SlashCommand>();
+
+        public static void AddCommand(IEnumerable<SlashCommand> additionalCommands)
+        {
+            _commands = _commands.Concat(additionalCommands);
+        }
+
+        public static void AddCommand(SlashCommand additionalCommand)
+        {
+            _commands = _commands.Concat(new[] {additionalCommand});
+        }
 
         public static async Task RegisterCommands(
             this DiscordSocketClient client,
-            IEnumerable<SlashCommand> commands,
             List<SocketGuild> guilds)
         {
-            List<SlashCommandProperties> currentGlobalCommands = new List<SlashCommandProperties>();
-            foreach (var slashCommand in commands)
+            var currentGlobalCommands = new List<SlashCommandProperties>();
+            foreach (var slashCommand in _commands)
             {
                 var command = new SlashCommandBuilder();
                 command.WithName(slashCommand.Name);
@@ -33,7 +43,7 @@ namespace DNU
                         command.AddOption(slashCommandOptionBuilder);
                     }
                 }
-                
+
 
                 var commandProperties = command.Build();
                 try
@@ -75,15 +85,15 @@ namespace DNU
             var onlineCommands = await client.GetGlobalApplicationCommandsAsync();
             var toRemove = onlineCommands
                 .Where(sac => currentGlobalCommands
-                    .Any(properties => properties.Name.Value.Equals(sac.Name)
-                                       && properties.Name.Value.Equals(sac.Name))
+                    .Any(properties => !(properties.Name.Value.Equals(sac.Name)
+                                         && properties.Name.Value.Equals(sac.Name)))
                 );
-            
+
             foreach (var socketApplicationCommand in toRemove)
             {
                 await socketApplicationCommand.DeleteAsync();
             }
-            
+
             foreach (var slashCommandProperties in currentGlobalCommands)
             {
                 await client.CreateGlobalApplicationCommandAsync(slashCommandProperties);
