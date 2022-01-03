@@ -29,6 +29,7 @@ namespace DNU
             List<SocketGuild> guilds)
         {
             var currentGlobalCommands = new List<SlashCommandProperties>();
+            var currentGuildCommands = new List<SlashCommandProperties>();
             foreach (var slashCommand in _commands)
             {
                 var command = new SlashCommandBuilder();
@@ -46,42 +47,28 @@ namespace DNU
 
 
                 var commandProperties = command.Build();
-                try
-                {
-                    if (slashCommand.IsGlobal)
-                    {
-                        currentGlobalCommands.Add(commandProperties);
-                    }
-                    else
-                    {
-                        foreach (var socketGuild in guilds)
-                        {
-                            await socketGuild.CreateApplicationCommandAsync(commandProperties);
-                        }
-                    }
 
-                    if (!Commands.ContainsKey(slashCommand.Name))
-                    {
-                        Commands.Add(slashCommand.Name, slashCommand);
-                    }
-                    else
-                    {
-                        Console.WriteLine(
-                            $"\n\nCommand {slashCommand.Name} was not added. Because Command with that Name already exits");
-                    }
+                if (slashCommand.IsGlobal)
+                {
+                    currentGlobalCommands.Add(commandProperties);
                 }
-                catch (HttpException exception)
+                else
                 {
-                    // If our command was invalid, we should catch an ApplicationCommandException.
-                    // This exception contains the path of the error as well as the error message.
-                    // You can serialize the Error field in the exception to get a visual of where your error is.
-                    var json = JsonConvert.SerializeObject(exception.Errors, Formatting.Indented);
+                    currentGuildCommands.Add(commandProperties);
+                }
 
-                    // You can send this error somewhere or just print it to the console, for this example we're just going to print it.
-                    Console.WriteLine(json + $"\n\nCommand {slashCommand.Name} was not added.");
+                if (!Commands.ContainsKey(slashCommand.Name))
+                {
+                    Commands.Add(slashCommand.Name, slashCommand);
+                }
+                else
+                {
+                    Console.WriteLine(
+                        $"\n\nCommand {slashCommand.Name} was not added. Because Command with that Name already exits");
                 }
             }
 
+            // Global Commands
             var onlineCommands = await client.GetGlobalApplicationCommandsAsync();
             var toRemove = onlineCommands
                 .Where(sac => currentGlobalCommands
@@ -98,7 +85,29 @@ namespace DNU
             {
                 await client.CreateGlobalApplicationCommandAsync(slashCommandProperties);
             }
+            
+            //GuildCommands
+            foreach (var socketGuild in guilds)
+            {
+                var onlineGuildCommands = await socketGuild.GetApplicationCommandsAsync();
+                var toRemoveGuild = onlineGuildCommands
+                    .Where(sac => currentGuildCommands
+                        .Any(properties => !(properties.Name.Value.Equals(sac.Name)
+                                             && properties.Name.Value.Equals(sac.Name)))
+                    );
+
+                foreach (var socketApplicationCommand in toRemoveGuild)
+                {
+                    await socketApplicationCommand.DeleteAsync();
+                }
+
+                foreach (var slashCommandProperties in currentGuildCommands)
+                {
+                    await socketGuild.CreateApplicationCommandAsync(slashCommandProperties);
+                }
+            }
         }
+
 
         public static async Task SlashCommandHandler(SocketSlashCommand command)
         {
